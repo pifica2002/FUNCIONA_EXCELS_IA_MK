@@ -11,7 +11,6 @@ from openpyxl import load_workbook
 import aux_fun as aux
 
 
-
 # --- Function to close the application on Escape key press ---
 def close_on_escape(event):
     event.widget.quit()
@@ -306,7 +305,7 @@ def convert_cooking_method_format(cooking_method_color_excel):
     cooking_method = ""
 
     if cooking_method_color_excel == "fry": # Fry
-        cooking_method = "FRY"
+        cooking_method = "PAN_FRY"
 
     elif  cooking_method_color_excel == "shallowfry": # Shallow fry
         cooking_method = "SHALLOW_FRY"
@@ -347,22 +346,95 @@ def obtain_file_name_1(file):
     return name_file1
 
 
+# def has_partial_match(cell_value, search_words, STOPWORDS):
+#     if pd.isna(cell_value):
+#         return False
+
+#     cell_text = str(cell_value).lower()
+#     cell_words = re.findall(r"\w+", cell_text)
+
+#     # Elimina stopwords y deja las palabras "útiles"
+#     cell_words = [w for w in cell_words if w not in STOPWORDS]
+
+#     # Coincidencia si al menos una palabra del search está incluida (como subcadena) en alguna celda
+#     for search_word in search_words:
+#         for cell_word in cell_words:
+#             if search_word in cell_word:  # <-- permite subpalabras (ej. 'prawns' dentro de 'kingprawns')
+#                 return True
+#     return False
+
+
+# Plurales irregulares más comunes en inglés
+IRREGULAR_PLURALS = {
+    "tomato": "tomatoes",
+    "potato": "potatoes",
+    "leaf": "leaves",
+    "loaf": "loaves",
+    "knife": "knives",
+    "wife": "wives",
+    "life": "lives",
+    "calf": "calves",
+    "elf": "elves",
+    "shelf": "shelves",
+    "berry": "berries",
+    "cherry": "cherries"
+}
+
+def generate_singular_plural(word):
+    """Devuelve {singular, plural} para una palabra."""
+    w = word.lower()
+
+    # 1) Irregular plurals
+    if w in IRREGULAR_PLURALS:
+        return {w, IRREGULAR_PLURALS[w]}
+    if w in IRREGULAR_PLURALS.values():
+        # obtener singular desde el diccionario inverso
+        singular = [k for k, v in IRREGULAR_PLURALS.items() if v == w][0]
+        return {singular, w}
+
+    # 2) Plurales regulares
+    if w.endswith("ies") and len(w) > 3:
+        # berry → berries
+        return {w[:-3] + "y", w}
+
+    if w.endswith("es") and len(w) > 3:
+        # tomatoes → tomato
+        return {w[:-2], w}
+
+    if w.endswith("s") and len(w) > 2:
+        # onions → onion
+        return {w[:-1], w}
+
+    # 3) Singular → generar plural simple
+    return {w, w + "s"}
+
+
 def has_partial_match(cell_value, search_words, STOPWORDS):
     if pd.isna(cell_value):
         return False
 
+    # Normalizar texto de la celda
     cell_text = str(cell_value).lower()
     cell_words = re.findall(r"\w+", cell_text)
 
-    # Elimina stopwords y deja las palabras "útiles"
+    # Eliminar stopwords
     cell_words = [w for w in cell_words if w not in STOPWORDS]
 
-    # Coincidencia si al menos una palabra del search está incluida (como subcadena) en alguna celda
-    for search_word in search_words:
+    # Generar todas las variantes singular/plural de búsqueda
+    expanded_search_words = set()
+    for w in search_words:
+        expanded_search_words.update(generate_singular_plural(w))
+
+    # Coincidencia por subcadena: si aparece UNA sola, ya vale
+    for search_word in expanded_search_words:
         for cell_word in cell_words:
-            if search_word in cell_word:  # <-- permite subpalabras (ej. 'prawns' dentro de 'kingprawns')
+            if search_word in cell_word:  # subcadena dentro de cualquier palabra
                 return True
+
     return False
+
+
+
 
 
 

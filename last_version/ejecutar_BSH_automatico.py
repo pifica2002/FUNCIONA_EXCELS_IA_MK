@@ -10,6 +10,7 @@ import string
 from openpyxl import load_workbook
 import aux_fun as aux
 import sys
+from openpyxl import load_workbook
 
 # --- Common English stopwords ---
 STOPWORDS = {
@@ -180,6 +181,7 @@ def program():
         case, exact_matches, partial_matches = aux.get_number_of_matches(case, df_base, main_ingredient_to_search, STOPWORDS)
 
         if case == 0:
+            print('-')
             print('   -----------------------0 matches (totales ni parciales)')
 
             new_ID = 'IDNotFound'
@@ -191,6 +193,7 @@ def program():
             print(f' --> Valor KPI: {sumador_KPIS_valor}')
 
         elif case == 1 or case == 2:
+            print('-')
             print('   -----------------------1 match (exacto o parcial)')
 
             # Get the match        
@@ -448,16 +451,21 @@ def program():
 
                 # Get the cooking method format for the catalogue
                 cooking_method_catalogue_format = aux.convert_cooking_method_format(cooking_method)
+                print(f"Cooking method in the format of the catalogue: '{cooking_method_catalogue_format}'")
 
                 # Check if the cooking method converted matches (exists) in the match (catalogue)
                 subset = more_than_one_match.iloc[:, 9:]
         
                 coincidences = subset == cooking_method_catalogue_format
 
+                print("Coincidences between the cooking method and the catalogue:")
+                print(coincidences)
+
                 hay_coincidencia = 0 # 0 no hay, 1, hay 1, 2, hay mas de 1
 
                 filas_coincidentes = {}
 
+                print('¿Cuantas coincidencias?')
                 if coincidences.any().any():
                     coincidentes = coincidences.stack()
                     coincidentes = coincidentes[coincidentes]
@@ -512,7 +520,7 @@ def program():
                     # id_catalogue = matches.loc[fila_idx].iloc[15]
 
 
-                    fila_real = matches.iloc[-1]   # última fila, la de datos reales
+                    fila_real = more_than_one_match.iloc[-1]   # última fila, la de datos reales
                     cooking_process_catalogue = fila_real[col_nombre]
 
                     ingredient_catalogue = fila_real[0]
@@ -596,7 +604,7 @@ def program():
 
 
 
-                    print("REVISAR DESDE AQUÍ")
+                    print("REVISAR DESDE AQUÍ----")
 
                     print("index KPI, ", index_KPI)
                     print("KPI ACTUAL, ", actual_value_KPI)
@@ -611,26 +619,37 @@ def program():
                     # sumador_KPIS_valor = actual_value_KPI + sumador_KPIS_valor
                     # print("sumamos: ", sumador_KPIS_valor)
 
-
+                    print("------>")
                     candidatas = subset.loc[list(filas_coincidentes)]
+                    print ("candidatas: ", candidatas)
+
+                    # obtener la columan A del catalogo de ingrediente de las filas candidasas
+                    print("Columna A del catálogo de ingredientes de las filas candidatas:")
+                    for idx, fila in candidatas.iterrows():
+                        id_temporal_2 = more_than_one_match.loc[idx].iloc[0]
+                        print(f"Fila {idx}: {id_temporal_2}, {fila.iloc[1]}")
+
+
 
                     encontrada = False
                     sumatorio = sumador_KPIS_valor
                     print("sumatorio antes empezar: ", sumatorio)
 
                     pares = index_numerico
-                    print("pares: ", pares)
+                    # print("pares: ", pares)
 
                     
-                    print(pares[2:])
+                    # print(pares[2:])
                     
                     for idx, valor_sumar in pares[2:]:   # empezamos en el tercer par
 
                         sumatorio += valor_sumar
 
                         valor_a_comprobar = row.iloc[idx]
+                        print(f"\nComprobando valor del KPI en columna index {idx} con valor '{valor_a_comprobar}' y sumatorio actual {sumatorio}")
 
                         coincidences_valor = candidatas == valor_a_comprobar
+                        print("coincidences_valor: ", coincidences_valor)
 
                         coincidentes_valor = coincidences_valor.stack()
                         coincidentes_valor = coincidentes_valor[coincidentes_valor]
@@ -641,9 +660,10 @@ def program():
 
                         if len(filas_filtradas) == 1:
                             print("ENCONTRADO:", list(filas_filtradas)[0])
+                            encontrada = True
 
                             f_i, col_nombre = coincidentes_valor.index[0]
-                            id_catalogue = matches.loc[f_i].iloc[15]
+                            id_catalogue = more_than_one_match.loc[f_i].iloc[15]
 
                             # Get the value of the cooking method column ("Cut")
                             cooking_method = row.iloc[index_cooking_method_colores_2]
@@ -678,6 +698,7 @@ def program():
                     if not encontrada:
                         print("MULTIPLES OPCIONES")
                         # print(candidatas)
+
 
                         # Recuperar las filas candidatas completas, con todas las columnas originales
                         candidatas_completas = more_than_one_match.loc[candidatas.index]
@@ -716,11 +737,12 @@ def program():
                         for _, fila in candidatas_completas.iterrows():
                             val15 = fila.iloc[15]
                             val0 = fila.iloc[0]
-                            lineas += f"({val15}, {val0})\n"
+                            # lineas += f"({val15}, {val0})\n"
+                            lineas += f"{val0}.{cooking_method}, {val15}\n"
 
 
 
-                        new_ID_cooking_method_ = ingredient + '.' + cooking_method + '\n' + lineas
+                        new_ID_cooking_method_ = ingredient + '.' + "MultipleOptions" + '\n' + lineas
 
                         
 
@@ -843,4 +865,56 @@ def program():
 
 
 
-program()
+# program()
+
+
+def limpiar(valor):
+    if valor is None:
+        return ""
+    return str(valor).strip().replace("\u00A0", "").strip()
+
+def analizar_excel(ruta_excel):
+    wb = load_workbook(ruta_excel, data_only=True)
+    ws = wb.worksheets[0]
+
+    # Leer fila 4
+    fila4 = [cell.value for cell in ws[4] if isinstance(cell.value, (int, float))]
+
+    if len(fila4) < 2:
+        raise ValueError("La fila 4 no tiene suficientes números.")
+
+    # Obtener mayor y segundo mayor
+    nums = sorted(fila4, reverse=True)
+    mayor, segundo = nums[0], nums[1]
+
+    # Localizar columnas
+    col_mayor = next(cell.column for cell in ws[4] if cell.value == mayor)
+    col_segundo = next(cell.column for cell in ws[4] if cell.value == segundo)
+
+    # Valores esperados SOLO en fila 1
+    esperado_mayor = "MAIN INGREDIENT"
+    esperado_segundo = "Property 3: PreparationMethod"
+
+    def validar(col, esperado):
+        valor_excel = limpiar(ws[1][col - 1].value)  # fila 1 → índice 1
+        valor_esperado = limpiar(esperado)
+        print(f"DEBUG: Col {col}: '{valor_excel}' vs '{valor_esperado}'")
+        return valor_excel == valor_esperado
+
+    # return {
+    #     "mayor": mayor,
+    #     "columna_mayor": col_mayor,
+    #     "validacion_mayor": validar(col_mayor, esperado_mayor),
+    #     "segundo_mayor": segundo,
+    #     "columna_segundo": col_segundo,
+    #     "validacion_segundo": validar(col_segundo, esperado_segundo),
+    # }
+
+    # devuelve true si ambos son correctos, false si alguno de los dos no es correcto
+    return validar(col_mayor, esperado_mayor) and validar(col_segundo, esperado_segundo)
+
+
+# comprobamos que el kpi con mayor peso es el main ingredient de las columnas azules y el siguiente es el property 3: preparation method, y que ambos están en la fila 1 del excel de colores
+if (analizar_excel(archivo2_nombre)):
+    print("Los KPIs están correctamente identificados.")
+    program()
