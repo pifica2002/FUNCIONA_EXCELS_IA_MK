@@ -21,6 +21,45 @@ STOPWORDS = {
     "de", "la", "el", "y", "en", "con", "para", "por", "del", "los", "las", "un", "una"
 }
 
+
+# ============================================================
+# VARIABLES
+# ============================================================
+
+# CASE 0 (0 total matches)
+ID_not_found = 'IDNotFound'
+
+# CASE 1 or CASE 2 (1 exact or partial match)
+#   Sí es cooking method y coincide --> se rellena el ID 
+#   XXXX
+#   Sí es cooking method pero NO coincide (el mismo para CASE 3 or CASE 4)
+ID_yes_cooking_method_but_not_match = 'IDFound.CookingMethod'
+
+#   No es cooking method (el mismo para CASE 3 or CASE 4)
+ID_no_cooking_method = 'IDFound.NoCookingMethod'
+
+#   El cooking method es NEW (el mismo para CASE 3 or CASE 4)
+ID_new_cooking_method = 'IDFound.NEWPreparationMethod'
+
+
+# CASE 3 or CASE 4 (+1 exact or partial match)
+#   Sí es cooking method y ninguno coincide (ID_yes_cooking_method_but_not_match)
+
+#   Sí es cooking method y coincide con uno solo --> se rellena el ID
+#   XXXX
+
+#   Sí es cooking method y coinciden varios y determinamos cuál de todos es --> se rellena el ID
+#   XXXX
+
+#   Sí es cooking method y coinciden varios y no determinamos cuál de todos es
+
+#   No es un Cooking Method -> ID_no_cooking_method
+
+#   El cookign method es NEW -> ID_new_cooking_method
+
+
+
+
 # ============================================================
 # OBTENER ARCHIVOS SIN TKINTER
 # ============================================================
@@ -39,17 +78,15 @@ archivo2_nombre = os.path.basename(archivo2)
 print("Archivo base de datos:", archivo1)
 print("Archivo generado por IA:", archivo2)
 
+
 # ============================================================
 # MAIN CODE
 # ============================================================
-
 # Main function to execute the program
 #  * file 1 = ID-Dish-Catalogue_v2.xlsx
 #  * file 2 = colores.xlsx
 def program():
 
-    # file1 = name_file1
-    # file2 = name_file2
     file1 = archivo1_nombre
     file2 = archivo2_nombre
 
@@ -67,8 +104,16 @@ def program():
     df_colores = pd.read_csv(file_colores_csv, sep=';', dtype=str)
     df_base = pd.read_csv(file_dataBase_csv, sep=';', dtype=str)
 
-    # Get the KPI values from the third row (KPI values) → save as `list of tuples` (index, weight).
+    # Get the KPI values from the third row (KPI values) → save as `list of tuples` (index, weight)
     index_numerico = aux.get_kpi_values_and_indexes(file_colores_csv)
+
+
+
+
+
+
+
+
 
     # --- Step 3: Sort the KPI values in descending order to prioritize the most important KPIs in the search ---
     index_numerico.sort(key=lambda x: x[1], reverse=True)
@@ -76,14 +121,14 @@ def program():
     # Get the first index and value of the KPI to use as the main KPI for the search (the one with the highest weight).
     index_KPI = 0
     actual_value_KPI = index_numerico[index_KPI][1]
-    actual_index_KPI = index_numerico[index_KPI][0]
-
+    
     # Print the first row of each CSV file to check the column names and save them in an array
     array_head_colores, array_head_base = aux.print_first_row_of_csv(file_colores_csv, file_dataBase_csv)
 
     # --- Step 4: Preprocess the base Excel file ---
     # Remove unnecessary rows from df_colores
     df_colores = df_colores.iloc[3:]
+
 
     columnas_archivo1 = [
         "contentData.name", "contentData.dishType", "contentData.imageResource",
@@ -184,8 +229,8 @@ def program():
             print('-')
             print('   -----------------------0 matches (totales ni parciales)')
 
-            new_ID = 'IDNotFound'
-            new_ID_cooking_method_ = aux.format_ingredient_and_cooking_method(main_ingredient_to_search, row.iloc[index_cooking_method_colores_2])
+            new_ID = ID_not_found
+            new_ID_cooking_method_ = aux.concatenate_with_dot(main_ingredient_to_search, row.iloc[index_cooking_method_colores_2])
             sumador_KPIS_valor = 0
 
             print(f' --> new_ID: {new_ID}')
@@ -207,14 +252,6 @@ def program():
 
             value_case_cooking_method = aux.check_cooking_method(row, index_cooking_method_colores_2, file_colores_excel)
 
-            # print("Como estamos mirando el proceso de cocinado, aumentamos el KPI")
-
-            # Actualmente KPI = (main ingredient) y queremos aumentar el KPI cono + peso del cooking process
-            # print("KPI ACTUAL, ", actual_value_KPI) # 70
-            # print("index KPI ACTUAL, ", index_KPI)  # 0
-
-            # print ( "AUMENTAMOS PESO KPI")
-
             index_KPI = index_KPI + 1
             actual_value_KPI = index_numerico[index_KPI][1] + actual_value_KPI
 
@@ -229,37 +266,23 @@ def program():
 
             if value_case_cooking_method == 0: # IT IS NEW
                 
-                new_ID = 'IDFound.NEWPreparationMethod'
+                # new_ID = 'IDFound.NEWPreparationMethod'
+                new_ID = ID_new_cooking_method
 
-                # The cooking method is NEW and it is not in the list of cooking methods
-                # We want to get the new cooking method
-                # Example: "NEW: air fried" --> "Air Fried" and the main ingredient it is King Prawns
-
-                # Get the value of the cooking method column ("NEW: air fried")
-                cooking_method = row.iloc[index_cooking_method_colores_2]
-
-                # Delete "new:" and the spaces at the beginning and the end ("air fried")
-                cooking_method = cooking_method.replace("NEW:", "").strip()
-
-                # Format the cooking method to have the first letter of each word in uppercase and the rest in lowercase ("Air Fried")
-                cooking_method = string.capwords(cooking_method)
-
-                # Delete all the spaces in the cooking method ("AirFried")
-                cooking_method = cooking_method.replace(" ", "")
+                # The cooking method is NEW (it isn't in the list of cooking methods)
+                # Example: main ingredient = "King Prawns", cooking method = "NEW: air fried"
 
                 # Get tht ingredient from the matches (it can be the exact match or the partial match, it depends on the case) and save it in a variable
                 ingredient = matches.iloc[0, 0]
 
-                # Format de ingredient to have the first letter of each word in uppercase and the rest in lowercase ("KingPrawns -> Kingprawns")
-                ingredient = string.capwords(ingredient)
-
-                # Delete all the spaces in the ingredient ("Ejemplo Prueba -> EjemploPrueba")
-                ingredient = ingredient.replace(" ", "")
+                # Get the value of the cooking method column ("NEW: air fried")
+                cooking_method = row.iloc[index_cooking_method_colores_2]
+ 
+                # Delete "new:" and the spaces at the beginning and the end ("air fried")
+                cooking_method = cooking_method.replace("NEW:", "").strip()
 
                 # Concatenate the main ingredient and the cooking method with a dot in between, and convert it to lowercase (MainIngredient.AirFried)
-                new_ID_cooking_method_ = ingredient + '.' + cooking_method
-
-                # sumador_KPIS_valor = actual_value_KPI
+                new_ID_cooking_method_ = aux.concatenate_with_dot(ingredient, cooking_method)
 
               
             elif value_case_cooking_method == 1: # IT IS A COOKING METHOD
@@ -346,15 +369,14 @@ def program():
                     # Format de cooking method to have the first letter of each word in uppercase and the rest in lowercase ("cut" -> Cut)
                     cooking_method = string.capwords(cooking_method)
 
-
-                    new_ID = "IDFound.CookingMethod"
+                    new_ID = ID_yes_cooking_method_but_not_match 
                     new_ID_cooking_method_ = ingredient + '.' + cooking_method
-                    # sumador_KPIS_valor = actual_value_KPI
+
                 
 
             elif value_case_cooking_method == 2: # IT IS NOT A COOKING METHOD
 
-                new_ID = 'IDFound.NoCookingMethod'
+                new_ID = ID_no_cooking_method 
 
                 # The cooking method is NOT a cooking method, so we have to concatenate the main ingredient with that no Cooking Method
                 # Example: the ingredient from the catalogue that matched is KingPrawns and the cooking method is Cut --> "Kingprawns.Cut"
@@ -365,7 +387,7 @@ def program():
                 # Get tht ingredient from the matches (it can be the exact match or the partial match, it depends on the case) and save it in a variable
                 ingredient = matches.iloc[0, 0]
 
-                new_ID_cooking_method_ = aux.format_words(ingredient, cooking_method)
+                new_ID_cooking_method_ = aux.concatenate_with_dot(ingredient, cooking_method)
 
                 sumador_KPIS_valor = actual_value_KPI
                 
@@ -411,22 +433,18 @@ def program():
 
             if value_case_cooking_method == 0: # IT IS NEW
 
-                new_ID = 'IDFound.NEWPreparationMethod'
+                new_ID = ID_new_cooking_method
 
-                # The cooking method is NEW and it is not in the list of cooking methods
-                # We want to get the new cooking method
-                # Example: "NEW: air fried" --> "Air Fried" and the main ingredient it is King Prawns
-
-                # Get the value of the cooking method column ("NEW: air fried")
+                # Get the cooking method and main ingredient 
+                # Example: "NEW: air fried" and "King Prawns"
                 cooking_method = row.iloc[index_cooking_method_colores_2]
-
-                # Delete "new:" and the spaces at the beginning and the end ("air fried")
-                cooking_method = cooking_method.replace("NEW:", "").strip()
-
-                # Get the main ingredient and save it in a variable
                 ingredient = main_ingredient_to_search
 
-                new_ID_cooking_method_ = aux.format_words(ingredient, cooking_method)
+                # Remove NEW
+                cooking_method = cooking_method.replace("NEW:", "").strip()
+
+                # Format the words and obtains: "KingPrawns.AirFried"
+                new_ID_cooking_method_ = aux.concatenate_with_dot(ingredient, cooking_method)
 
                 sumador_KPIS_valor = actual_value_KPI
 
@@ -491,7 +509,7 @@ def program():
 
                 if hay_coincidencia == 0: # El cooking method no coincide con ningún cooking method de las coincidencias enocntradas
 
-                    new_ID = 'IDFound.CookingMethod'
+                    new_ID = ID_yes_cooking_method_but_not_match
                     
                     # Get the value of the cooking method column ("Cut")
                     cooking_method = row.iloc[index_cooking_method_colores_2]
@@ -499,7 +517,7 @@ def program():
                     # Get the main ingredient and save it in a variable
                     ingredient = main_ingredient_to_search
 
-                    new_ID_cooking_method_ = aux.format_words(ingredient, cooking_method)
+                    new_ID_cooking_method_ = aux.concatenate_with_dot(ingredient, cooking_method)
 
                     sumador_KPIS_valor = actual_value_KPI
 
@@ -530,25 +548,10 @@ def program():
                     # Get the value of the cooking method column ("Cut")
                     cooking_method = row.iloc[index_cooking_method_colores_2]
 
-                    # # Format the cooking method to have the first letter of each word in uppercase and the rest in lowercase ("Cut")
-                    # cooking_method = string.capwords(cooking_method)
-
-                    # # Delete all the spaces in the cooking method ("Cut")
-                    # cooking_method = cooking_method.replace(" ", "")
-
                     # Get the main ingredient and save it in a variable
                     ingredient = main_ingredient_to_search
 
-                    # # Format de ingredient to have the first letter of each word in uppercase and the rest in lowercase ("KingPrawns -> Kingprawns")
-                    # ingredient = string.capwords(ingredient)
-
-                    # # Delete all the spaces in the ingredient ("Ejemplo Prueba -> EjemploPrueba")
-                    # ingredient = ingredient.replace(" ", "")
-
-                    # # Concatenate the main ingredient and the cooking method with a dot in between, and convert it to lowercase (MainIngredient.AirFried)
-                    # new_ID_cooking_method_ = ingredient + '.' + cooking_method
-
-                    new_ID_cooking_method_ = aux.format_words(ingredient, cooking_method)
+                    new_ID_cooking_method_ = aux.concatenate_with_dot(ingredient, cooking_method)
 
                     new_ID = id_catalogue
                     sumador_KPIS_valor = actual_value_KPI
@@ -665,28 +668,14 @@ def program():
                             f_i, col_nombre = coincidentes_valor.index[0]
                             id_catalogue = more_than_one_match.loc[f_i].iloc[15]
 
-                            # Get the value of the cooking method column ("Cut")
-                            cooking_method = row.iloc[index_cooking_method_colores_2]
-
-                            # Format the cooking method to have the first letter of each word in uppercase and the rest in lowercase ("Cut")
-                            cooking_method = string.capwords(cooking_method)
-
-                            # Delete all the spaces in the cooking method ("Cut")
-                            cooking_method = cooking_method.replace(" ", "")
-
-                            # Get the main ingredient and save it in a variable
-                            ingredient = main_ingredient_to_search
-
-                            # Format de ingredient to have the first letter of each word in uppercase and the rest in lowercase ("KingPrawns -> Kingprawns")
-                            ingredient = string.capwords(ingredient)
-
-                            # Delete all the spaces in the ingredient ("Ejemplo Prueba -> EjemploPrueba")
-                            ingredient = ingredient.replace(" ", "")
-
-                            new_ID = id_catalogue
+                            
+                            cooking_method = row.iloc[index_cooking_method_colores_2]   # Get the value of the cooking method column ("Cut")   
+                            ingredient = main_ingredient_to_search  # Get the main ingredient and save it in a variable
 
                             # Concatenate the main ingredient and the cooking method with a dot in between, and convert it to lowercase (MainIngredient.AirFried)
-                            new_ID_cooking_method_ = ingredient + '.' + cooking_method
+                            new_ID_cooking_method_ = aux.concatenate_with_dot(ingredient, cooking_method)
+
+                            new_ID = id_catalogue
 
                             break
 
@@ -744,14 +733,6 @@ def program():
 
                         new_ID_cooking_method_ = ingredient + '.' + "MultipleOptions" + '\n' + lineas
 
-                        
-
-
-
-                
-
-
-
 
 
 
@@ -766,18 +747,17 @@ def program():
 
             elif value_case_cooking_method == 2: # IT IS NOT A COOKING METHOD
 
-                new_ID = 'IDFound.NoCookingMethod'
+                new_ID = ID_no_cooking_method
 
-                # The cooking method is NOT a cooking method, so we have to concatenate the main ingredient with that no Cooking Method
-                # Example: the ingredient to search KingPrawns and the cooking method is Cut --> "Kingprawns.Cut"
+                # NOT A COOKING METHOD: Concatenate main ingredient the no cooking method ("King Prawns" and "Cut" --> "KingPrawns.Cut"
 
                 # Get the value of the cooking method column ("Cut")
                 cooking_method = row.iloc[index_cooking_method_colores_2]
 
-                # Get the main ingredient and save it in a variable
+                # Get the main ingredient and save it in a variable ("King Prawns")
                 main_ingredient = main_ingredient_to_search
 
-                new_ID_cooking_method_ = aux.format_words(main_ingredient, cooking_method)
+                new_ID_cooking_method_ = aux.concatenate_with_dot(main_ingredient, cooking_method)
                 sumador_KPIS_valor = actual_value_KPI
 
                 print(f' --> new_ID: {new_ID}')
@@ -786,9 +766,6 @@ def program():
 
 
 
-        #     print(f' --> new_ID: {new_ID}')
-        #     print(f' --> new_ID_cooking_method_: {new_ID_cooking_method_}')
-        #     print(f' --> Valor KPI: {sumador_KPIS_valor}')
 
 
         df_colores.at[index, df_colores.columns[index_columna_O_colores_2]] = new_ID
@@ -862,12 +839,6 @@ def program():
 
 
 
-
-
-
-# program()
-
-
 def limpiar(valor):
     if valor is None:
         return ""
@@ -900,15 +871,6 @@ def analizar_excel(ruta_excel):
         valor_esperado = limpiar(esperado)
         print(f"DEBUG: Col {col}: '{valor_excel}' vs '{valor_esperado}'")
         return valor_excel == valor_esperado
-
-    # return {
-    #     "mayor": mayor,
-    #     "columna_mayor": col_mayor,
-    #     "validacion_mayor": validar(col_mayor, esperado_mayor),
-    #     "segundo_mayor": segundo,
-    #     "columna_segundo": col_segundo,
-    #     "validacion_segundo": validar(col_segundo, esperado_segundo),
-    # }
 
     # devuelve true si ambos son correctos, false si alguno de los dos no es correcto
     return validar(col_mayor, esperado_mayor) and validar(col_segundo, esperado_segundo)

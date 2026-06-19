@@ -11,9 +11,6 @@ from openpyxl import load_workbook
 import aux_fun as aux
 
 
-# --- Function to close the application on Escape key press ---
-def close_on_escape(event):
-    event.widget.quit()
 
 # --- Function to get the column mapping between two lists of columns ---
 def get_column_index(col_str):
@@ -21,15 +18,6 @@ def get_column_index(col_str):
     for c in col_str:
         index = index * 26 + (ord(c.upper()) - ord('A') + 1)
     return index - 1  # Restamos 1 porque Excel tiene una numeración de columnas 1-based y Python 0-based
-
-
-# --- Function to validate a file ---
-def validate_file(full_path):
-    if not os.path.exists(full_path):
-        return f"El archivo '{os.path.basename(full_path)}' no existe."
-    if not full_path.lower().endswith(".xlsx"):
-        return f"El archivo '{os.path.basename(full_path)}' no es un archivo .xlsx."
-    return None  # No errors
 
 
 # --- Function to transform the EXCEL file to a CSV file ---
@@ -56,12 +44,60 @@ def get_kpi_values_and_indexes(csv_file):
     return index_numerico
 
 
+# --- Function to concatenate two words with a dot in between, and the first letter capitalized ---
+#     Example: word1 = Air Fried, word2 = King Prawns -> AirFried.KingPrawns
+def concatenate_with_dot(word1, word2):
+
+    # Format de ingredient to have the first letter of each word in uppercase and the rest in lowercase ("King prawns -> King Prawns", Air fried -> Air Fried)
+    word1 = string.capwords(word1)
+    word2 = string.capwords(word2)
+
+    # Delete all the space in each word ("King Prawns -> KingPrawns", "Air Fried -> AirFried") 
+    word1 = word1.replace(" ", "")
+    word2 = word2.replace(" ", "")
+
+    string_to_return = word1 + '.' + word2
+
+    string_to_return = string_to_return.replace("New:", "") # Delete "New:" if it exists
+
+    return string_to_return # (KingPrawns.AirFried)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# --- Function to validate a file ---
+def validate_file(full_path):
+    if not os.path.exists(full_path):
+        return f"El archivo '{os.path.basename(full_path)}' no existe."
+    if not full_path.lower().endswith(".xlsx"):
+        return f"El archivo '{os.path.basename(full_path)}' no es un archivo .xlsx."
+    return None  # No errors
+
+
+
+
+
+
+
+
 # --- Function to print the first row of each CSV file ---
 def print_first_row_of_csv(csv_file_1, csv_file_2):
 
     array_head_colores = []
     array_head_base = []
-    # print(f"Primera fila de {file_colores_csv}:")
+    # print(f"Primera fila de {csv_file_1}:")
     with open(csv_file_1, 'r') as f:
         reader = csv.reader(f, delimiter=';')
         for i, row in enumerate(reader):
@@ -70,7 +106,7 @@ def print_first_row_of_csv(csv_file_1, csv_file_2):
                 array_head_colores = row
                 break
 
-    # print(f"Primera fila de {file_dataBase_csv}:")
+    # print(f"Primera fila de {csv_file_2}:")
     with open(csv_file_2, 'r') as f:
         reader = csv.reader(f, delimiter=';')
         for i, row in enumerate(reader):
@@ -192,26 +228,7 @@ def obtener_valores_json(nombre_fichero):
         print("Error: El fichero JSON no tiene la estructura esperada.")
         return None, None
 
-# --- Function to format the name of an ingredient and the cooking process ---
-#     -> format: main ingredient + . + cooking process (no spaces, first letter of each word in uppercase)
-def format_ingredient_and_cooking_method(main_ingredient, cooking_method):
-    
-    # Remove spaces and capitalize the first letter of each word in the main ingredient
-    formatted_main_ingredient = ''.join(word.capitalize() for word in main_ingredient.split())
 
-    # Remove spaces and capitalize the first letter of each word in the cooking method
-    formatted_cooking_method = ''.join(word.capitalize() for word in cooking_method.split())
-    
-    # Combine them with a dot
-    formatted_string = f"{formatted_main_ingredient}.{formatted_cooking_method}"
-
-    # detelete spaces
-    formatted_string = formatted_string.replace(" ", "")
-
-    # Delete New: only if exist
-    formatted_string = formatted_string.replace("New:", "")
-    
-    return formatted_string
 
 
 # --- Return the no cooking methods ---
@@ -364,6 +381,89 @@ def obtain_file_name_1(file):
 #     return False
 
 
+# # Plurales irregulares más comunes en inglés
+# IRREGULAR_PLURALS = {
+#     "tomato": "tomatoes",
+#     "potato": "potatoes",
+#     "leaf": "leaves",
+#     "loaf": "loaves",
+#     "knife": "knives",
+#     "wife": "wives",
+#     "life": "lives",
+#     "calf": "calves",
+#     "elf": "elves",
+#     "shelf": "shelves",
+#     "berry": "berries",
+#     "cherry": "cherries"
+# }
+
+# def generate_singular_plural(word):
+#     """Devuelve {singular, plural} para una palabra."""
+#     w = word.lower()
+
+#     # 1) Irregular plurals
+#     if w in IRREGULAR_PLURALS:
+#         return {w, IRREGULAR_PLURALS[w]}
+#     if w in IRREGULAR_PLURALS.values():
+#         # obtener singular desde el diccionario inverso
+#         singular = [k for k, v in IRREGULAR_PLURALS.items() if v == w][0]
+#         return {singular, w}
+
+#     # 2) Plurales regulares
+#     if w.endswith("ies") and len(w) > 3:
+#         # berry → berries
+#         return {w[:-3] + "y", w}
+
+#     if w.endswith("es") and len(w) > 3:
+#         # tomatoes → tomato
+#         return {w[:-2], w}
+
+#     if w.endswith("s") and len(w) > 2:
+#         # onions → onion
+#         return {w[:-1], w}
+
+#     # 3) Singular → generar plural simple
+#     return {w, w + "s"}
+
+
+# def has_partial_match(cell_value, search_words, STOPWORDS):
+#     if pd.isna(cell_value):
+#         return False
+
+#     # Normalizar texto de la celda
+#     cell_text = str(cell_value).lower()
+#     cell_words = re.findall(r"\w+", cell_text)
+
+#     # Eliminar stopwords
+#     cell_words = [w for w in cell_words if w not in STOPWORDS]
+
+#     # Generar todas las variantes singular/plural de búsqueda
+#     expanded_search_words = set()
+#     for w in search_words:
+#         expanded_search_words.update(generate_singular_plural(w))
+
+#     # Coincidencia por subcadena: si aparece UNA sola, ya vale
+#     for search_word in expanded_search_words:
+#         for cell_word in cell_words:
+#             if search_word in cell_word:  # subcadena dentro de cualquier palabra
+#                 return True
+
+#     return False
+
+
+import unicodedata
+import re
+import pandas as pd
+
+def normalize_accents(text):
+    """Elimina tildes y diacríticos."""
+    if text is None:
+        return ""
+    text = str(text)
+    normalized = unicodedata.normalize("NFD", text)
+    return "".join(c for c in normalized if unicodedata.category(c) != "Mn")
+
+
 # Plurales irregulares más comunes en inglés
 IRREGULAR_PLURALS = {
     "tomato": "tomatoes",
@@ -382,30 +482,26 @@ IRREGULAR_PLURALS = {
 
 def generate_singular_plural(word):
     """Devuelve {singular, plural} para una palabra."""
-    w = word.lower()
+    w = normalize_accents(word.lower())
 
-    # 1) Irregular plurals
+    # 1) Irregulares
     if w in IRREGULAR_PLURALS:
         return {w, IRREGULAR_PLURALS[w]}
     if w in IRREGULAR_PLURALS.values():
-        # obtener singular desde el diccionario inverso
         singular = [k for k, v in IRREGULAR_PLURALS.items() if v == w][0]
         return {singular, w}
 
-    # 2) Plurales regulares
+    # 2) Reglas regulares
     if w.endswith("ies") and len(w) > 3:
-        # berry → berries
         return {w[:-3] + "y", w}
 
     if w.endswith("es") and len(w) > 3:
-        # tomatoes → tomato
         return {w[:-2], w}
 
     if w.endswith("s") and len(w) > 2:
-        # onions → onion
         return {w[:-1], w}
 
-    # 3) Singular → generar plural simple
+    # 3) Singular → plural simple
     return {w, w + "s"}
 
 
@@ -414,21 +510,23 @@ def has_partial_match(cell_value, search_words, STOPWORDS):
         return False
 
     # Normalizar texto de la celda
-    cell_text = str(cell_value).lower()
+    cell_text = normalize_accents(str(cell_value).lower())
     cell_words = re.findall(r"\w+", cell_text)
 
-    # Eliminar stopwords
-    cell_words = [w for w in cell_words if w not in STOPWORDS]
+    # Eliminar stopwords (también normalizadas)
+    STOPWORDS_NORM = {normalize_accents(w) for w in STOPWORDS}
+    cell_words = [w for w in cell_words if w not in STOPWORDS_NORM]
 
-    # Generar todas las variantes singular/plural de búsqueda
+    # Expandir palabras de búsqueda (normalizadas)
     expanded_search_words = set()
     for w in search_words:
-        expanded_search_words.update(generate_singular_plural(w))
+        w_norm = normalize_accents(w.lower())
+        expanded_search_words.update(generate_singular_plural(w_norm))
 
-    # Coincidencia por subcadena: si aparece UNA sola, ya vale
+    # Coincidencia por subcadena
     for search_word in expanded_search_words:
         for cell_word in cell_words:
-            if search_word in cell_word:  # subcadena dentro de cualquier palabra
+            if search_word in cell_word:
                 return True
 
     return False
@@ -502,26 +600,3 @@ def get_number_of_matches(case, df_base, main_ingredient_to_search, STOPWORDS):
     return case, exact_matches, partial_matches
 
 
-# Formats both words in the same way: first letter of each word in each variable in uppercase and the rest in lowercase, and removes spaces. And concatenates them with a dot in between
-# Example: word1 = "Ejemplo Prueba" and word2 = "Air Fried" -> "Ejemploprueba.AirFried"
-def format_words(word1, word2):
-
-    # word1: ingredient
-    # word2: cooking method
-
-    # Format the cooking method to have the first letter of each word in uppercase and the rest in lowercase ("Air Fried -> Air Fried")
-    word2 = string.capwords(word2)
-
-    # Delete all the spaces in the cooking method ("Air Fried -> AirFried")
-    word2 = word2.replace(" ", "")
-
-    # Format the ingredient to have the first letter of each word in uppercase and the rest in lowercase ("KingPrawns -> Kingprawns")
-    word1 = string.capwords(word1)
-
-    # Delete all the spaces in the ingredient ("Ejemplo Prueba -> EjemploPrueba")
-    word1 = word1.replace(" ", "")
-
-    # Concatenate the main ingredient and the cooking method with a dot in between, and convert it to lowercase (MainIngredient.AirFried)
-    new_ID_cooking_method_ = word1 + '.' + word2
-
-    return new_ID_cooking_method_
