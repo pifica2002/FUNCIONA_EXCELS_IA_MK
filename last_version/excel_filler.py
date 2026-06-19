@@ -42,7 +42,8 @@ def generate_excel_from_multiple_txt(template_xlsx_path,
                                      model,
                                      processor,
                                      gen_kwargs,
-                                     url_list):
+                                     url_list, 
+                                     output_excel_name):
 
     instrucciones_path = "instrucciones.txt"
 
@@ -116,6 +117,8 @@ def generate_excel_from_multiple_txt(template_xlsx_path,
             current_row += 1
 
     # 9. Guardar Excel final
-    output_path = "output_final.xlsx"
-    wb.save(output_path)
-    return output_path
+    # output_path = "output_final.xlsx"
+    # wb.save(output_path)
+    # return output_path
+    wb.save(output_excel_name)
+    return output_excel_name
